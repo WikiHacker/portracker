@@ -13,7 +13,7 @@ All notable changes to portracker will be documented in this file.
 
 ### Dashboard
 
-- **Auto-Refresh**: Added a button to auto-refresh ports and services every 30 seconds
+- **Auto-Refresh**: Added a toggle to auto-refresh ports and services every 30 seconds
 
 ## [1.1.1] - 2025-01-17
 
