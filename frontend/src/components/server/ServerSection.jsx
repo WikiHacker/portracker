@@ -146,6 +146,18 @@ function ServerSectionComponent({
     
   }, [sortConfig]);
 
+  const portMood = useMemo(() => {
+    const count = visiblePorts.length;
+    if (count === 0) return null;
+    if (count < 10) {
+      return `Feels a bit lonely here, only ${count} service${count === 1 ? "" : "s"} standing watch.`;
+    }
+    if (count > 100) {
+      return `Hoarder alert: ${count} services piled into this host.`;
+    }
+    return null;
+  }, [visiblePorts.length]);
+
   const sortedPorts = useMemo(() => {
     let sortablePorts = [...visiblePorts];
 
@@ -626,6 +638,11 @@ function ServerSectionComponent({
               )}
             </div>
           </div>
+          {portMood && (
+            <p className="mt-3 text-sm text-slate-500 dark:text-slate-400">
+              {portMood}
+            </p>
+          )}
         </div>
 
         {ok && visiblePorts.length > 0 && (

@@ -42,7 +42,7 @@ export function HiddenPortsDrawer({ hiddenPorts, onUnhide, onUnhideAll, serverId
                 className="flex items-center justify-between p-2 bg-slate-50 dark:bg-slate-800/50 rounded-md"
               >
                 <div className="text-sm text-slate-700 dark:text-slate-300">
-                  <span className="font-mono">{p.host_port}</span> —{" "}
+                  <span className="font-mono">{p.host_port}</span> -{" "}
                   <span className="truncate">{p.owner}</span>
                 </div>
                 <TooltipProvider>
@@ -66,3 +66,5 @@ export function HiddenPortsDrawer({ hiddenPorts, onUnhide, onUnhideAll, serverId
     </div>
   );
 }
+
+

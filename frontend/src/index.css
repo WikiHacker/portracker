@@ -175,3 +175,92 @@
   .motion-safe\:shadow-lg[data-state] { box-shadow: 0 10px 15px -3px hsl(0 0% 0% / 0.15), 0 4px 6px -2px hsl(0 0% 0% / 0.1); }
   .motion-reduce\:shadow-none { box-shadow: none; }
 }
+
+body.hacker-mode {
+  background-color: #021404;
+  color: #bffac2;
+  font-family: 'Courier New', 'Consolas', 'Monaco', monospace;
+}
+
+body.hacker-mode .hacker-mode-active {
+  background-color: transparent;
+  color: inherit;
+}
+
+body.hacker-mode .bg-white,
+body.hacker-mode .bg-slate-50,
+body.hacker-mode .bg-slate-100,
+body.hacker-mode .dark\:bg-slate-800\/50 {
+  background-color: rgba(0, 20, 5, 0.9) !important;
+  color: #bffac2 !important;
+}
+
+body.hacker-mode .text-slate-900,
+body.hacker-mode .dark\:text-slate-100 {
+  color: #bffac2 !important;
+}
+
+body.hacker-mode .border-slate-200,
+body.hacker-mode .dark\:border-slate-700\/50,
+body.hacker-mode .dark\:border-slate-700 {
+  border-color: rgba(50, 193, 118, 0.4) !important;
+}
+
+body.hacker-mode .bg-rose-50\/95,
+body.hacker-mode .dark\:bg-rose-900\/95 {
+  background-color: rgba(20, 5, 0, 0.95) !important;
+}
+
+body.hacker-mode .border-rose-200,
+body.hacker-mode .dark\:border-rose-800 {
+  border-color: rgba(193, 50, 50, 0.4) !important;
+}
+
+body.hacker-mode .text-rose-900,
+body.hacker-mode .dark\:text-rose-100 {
+  color: #ffb3b3 !important;
+}
+
+body.hacker-mode .bg-rose-500,
+body.hacker-mode .dark\:bg-rose-400 {
+  background-color: #ff5050 !important;
+}
+
+body.hacker-mode .bg-indigo-500,
+body.hacker-mode .dark\:bg-indigo-400 {
+  background-color: #50ffa0 !important;
+}
+
+body.hacker-mode .bg-white\/95,
+body.hacker-mode .dark\:bg-slate-800\/95 {
+  background-color: rgba(0, 20, 5, 0.95) !important;
+}
+
+body.hacker-mode .text-slate-900,
+body.hacker-mode .dark\:text-slate-100 {
+  color: #bffac2 !important;
+}
+
+body.hacker-mode .text-slate-600,
+body.hacker-mode .dark\:text-slate-400,
+body.hacker-mode .text-slate-500,
+body.hacker-mode .dark\:text-slate-300 {
+  color: #a0e0a8 !important;
+}
+
+body.hacker-mode::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    0deg,
+    rgba(0, 255, 170, 0.08),
+    rgba(0, 255, 170, 0.08) 1px,
+    transparent 1px,
+    transparent 3px
+  );
+  opacity: 0.25;
+  mix-blend-mode: screen;
+  z-index: 5;
+}

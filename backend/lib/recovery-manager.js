@@ -1,6 +1,6 @@
 /**
  * Recovery Key Manager
- * 
+ *
  * Handles emergency account recovery when users are locked out.
  * Generates time-limited, single-use recovery keys.
  */
@@ -9,6 +9,53 @@ const crypto = require('crypto');
 const { Logger } = require('./logger');
 
 const logger = new Logger('RecoveryManager', { debug: process.env.DEBUG === 'true' });
+
+const ADJECTIVES = [
+  'hungry',
+  'stellar',
+  'brisk',
+  'caffeinated',
+  'curious',
+  'wired',
+  'silent',
+  'vigilant',
+  'midnight',
+  'luminous',
+  'restless',
+  'velvet',
+  'electric',
+  'braided',
+  'sly'
+];
+
+const NOUNS = [
+  'otter',
+  'ferret',
+  'jaguar',
+  'lemur',
+  'heron',
+  'badger',
+  'chisel',
+  'daemon',
+  'antenna',
+  'pluto',
+  'vortex',
+  'relay',
+  'sparrow',
+  'circuit',
+  'capsule'
+];
+
+function capitalizeWord(word) {
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function buildFriendlyKey() {
+  const adjective = capitalizeWord(ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)]);
+  const noun = capitalizeWord(NOUNS[Math.floor(Math.random() * NOUNS.length)]);
+  const suffix = crypto.randomBytes(2).toString('hex').toUpperCase();
+  return `${adjective}${noun}${suffix}`;
+}
 
 class RecoveryManager {
   constructor() {
@@ -26,8 +73,7 @@ class RecoveryManager {
       return null;
     }
 
-    const randomPart = crypto.randomBytes(3).toString('hex').toUpperCase();
-    this.recoveryKey = `RK-${randomPart}`;
+    this.recoveryKey = buildFriendlyKey();
     this.expiresAt = Date.now() + (15 * 60 * 1000);
     this.used = false;
 
@@ -36,18 +82,12 @@ class RecoveryManager {
   }
 
   displayKey() {
-    const expiresIn = Math.floor((this.expiresAt - Date.now()) / 1000 / 60);
-    
+    const expiresIn = Math.max(1, Math.floor((this.expiresAt - Date.now()) / 60000));
+
     logger.info('');
-    logger.warn('╔════════════════════════════════════════╗');
-    logger.warn('║   RECOVERY MODE ACTIVE                 ║');
-    logger.warn('║                                        ║');
-    logger.warn(`║   Recovery Key: ${this.recoveryKey.padEnd(20)}║`);
-    logger.warn(`║   Expires: ${expiresIn} minutes${' '.repeat(21 - expiresIn.toString().length)}║`);
-    logger.warn('║                                        ║');
-    logger.warn('║   Login with any username and this     ║');
-    logger.warn('║   key as password to reset access      ║');
-    logger.warn('╚════════════════════════════════════════╝');
+    logger.warn('Recovery mode active - use any username with this code as the password:');
+    logger.warn(`  ${this.recoveryKey}`);
+    logger.warn(`  Expires in ${expiresIn} minute${expiresIn === 1 ? '' : 's'} - single use. Treat it like root.`);
     logger.info('');
   }
 
@@ -62,11 +102,7 @@ class RecoveryManager {
       return false;
     }
 
-    if (inputKey === this.recoveryKey) {
-      return true;
-    }
-
-    return false;
+    return inputKey === this.recoveryKey;
   }
 
   invalidate() {
@@ -85,3 +121,5 @@ class RecoveryManager {
 }
 
 module.exports = new RecoveryManager();
+
+

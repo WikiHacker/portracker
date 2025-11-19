@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from "react";
+import React, { useEffect, useState, useCallback, useMemo, useRef } from "react";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import {
   Dialog,
@@ -30,11 +30,28 @@ import { useWhatsNew } from "./lib/hooks/useWhatsNew";
 import { saveCustomServiceName, deleteCustomServiceName, getCustomServiceNames, batchCustomServiceNames } from "./lib/api/customServiceNames";
 import { batchNotes, saveNote } from "./lib/api/notes";
 import { generatePortKey } from "./lib/utils/portUtils";
+import { formatUptime } from "@/lib/utils";
 import { useAuth } from "./contexts/AuthContext";
+import { buildAutoRefreshMessages } from "@/lib/autoRefreshMessages";
 
 const keyOf = (srvId, p) => generatePortKey(srvId, p);
 
 const logger = new Logger('App');
+
+const KONAMI_SEQUENCE = [
+  "ArrowUp",
+  "ArrowUp",
+  "ArrowDown",
+  "ArrowDown",
+  "ArrowLeft",
+  "ArrowRight",
+  "ArrowLeft",
+  "ArrowRight",
+  "b",
+  "a"
+];
+
+const KONAMI_HINTS = ["↑", "Course input detected…", "gg, keyboard pilot."];
 
 
 export default function App() {
@@ -59,6 +76,85 @@ export default function App() {
   const [batchNotesModalOpen, setBatchNotesModalOpen] = useState(false);
   const [batchLoading, setBatchLoading] = useState(false);
   const [renameLoading, setRenameLoading] = useState(false);
+  const [hackerMode, setHackerMode] = useState(() => {
+    try {
+      return localStorage.getItem("portracker_hacker_mode") === "true";
+    } catch {
+      return false;
+    }
+  });
+  const [konamiHint, setKonamiHint] = useState(null);
+  const konamiProgressRef = useRef(0);
+  const konamiHintStageRef = useRef(0);
+  const konamiHintTimeoutRef = useRef(null);
+  const [healthToast, setHealthToast] = useState(null);
+  const healthToastTimeoutRef = useRef(null);
+
+  const showKonamiHint = useCallback((stage) => {
+    const index = Math.min(stage, KONAMI_HINTS.length - 1);
+    setKonamiHint(KONAMI_HINTS[index]);
+    if (konamiHintTimeoutRef.current) {
+      clearTimeout(konamiHintTimeoutRef.current);
+    }
+    konamiHintTimeoutRef.current = setTimeout(() => setKonamiHint(null), 1200);
+  }, []);
+
+  useEffect(() => () => {
+    if (konamiHintTimeoutRef.current) {
+      clearTimeout(konamiHintTimeoutRef.current);
+    }
+  }, []);
+
+  useEffect(() => () => {
+    if (healthToastTimeoutRef.current) {
+      clearTimeout(healthToastTimeoutRef.current);
+    }
+  }, []);
+
+  const pushHealthToast = useCallback((payload) => {
+    setHealthToast(payload);
+    if (healthToastTimeoutRef.current) {
+      clearTimeout(healthToastTimeoutRef.current);
+    }
+    healthToastTimeoutRef.current = setTimeout(() => setHealthToast(null), 4000);
+  }, []);
+
+  const toggleHackerMode = useCallback(() => {
+    setHackerMode(prev => {
+      const next = !prev;
+      pushHealthToast({
+        type: "info",
+        message: next
+          ? "Hacker mode activated. Use Ctrl+Shift+H to toggle."
+          : "Hacker mode disabled."
+      });
+      return next;
+    });
+    konamiHintStageRef.current = 0;
+    konamiProgressRef.current = 0;
+  }, [pushHealthToast]);
+
+  const disableHackerMode = useCallback(() => {
+    setHackerMode(prev => {
+      if (!prev) return prev;
+      pushHealthToast({
+        type: "info",
+        message: "Hacker mode disabled."
+      });
+      return false;
+    });
+    konamiHintStageRef.current = 0;
+    konamiProgressRef.current = 0;
+  }, [pushHealthToast]);
+
+  useEffect(() => {
+    try {
+      localStorage.setItem("portracker_hacker_mode", hackerMode ? "true" : "false");
+    } catch { void 0; }
+    if (typeof document !== "undefined") {
+      document.body.classList.toggle("hacker-mode", hackerMode);
+    }
+  }, [hackerMode]);
 
   const [actionFeedback, setActionFeedback] = useState({
     copy: null,
@@ -665,6 +761,43 @@ export default function App() {
       window.history.replaceState({}, '', url.toString());
   } catch { void 0; }
   }, [selectedServer, deepLinkContainer]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const handleKeyDown = (event) => {
+      if (event.ctrlKey && event.shiftKey && event.key.toLowerCase() === "h") {
+        event.preventDefault();
+        toggleHackerMode();
+        return;
+      }
+
+      if (event.key === "ArrowUp" && konamiProgressRef.current === 0) {
+        const stage = konamiHintStageRef.current;
+        if (stage < KONAMI_HINTS.length) {
+          showKonamiHint(stage);
+          konamiHintStageRef.current = stage + 1;
+        }
+      }
+
+      const normalized = event.key.length === 1 ? event.key.toLowerCase() : event.key;
+      const expected = KONAMI_SEQUENCE[konamiProgressRef.current];
+
+      if (normalized === expected) {
+        konamiProgressRef.current += 1;
+        if (konamiProgressRef.current === KONAMI_SEQUENCE.length) {
+          konamiProgressRef.current = 0;
+          toggleHackerMode();
+          return;
+        }
+        return;
+      }
+
+      konamiProgressRef.current = normalized === KONAMI_SEQUENCE[0] ? 1 : 0;
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [showKonamiHint, toggleHackerMode]);
 
   const handleContainerOpen = useCallback((serverId, containerId) => {
     setDeepLinkContainer(containerId);
@@ -1453,6 +1586,29 @@ export default function App() {
     setSelectionMode(true);
   }, []);
 
+  const handleLogoHealthCheck = useCallback(async () => {
+    const started = performance.now();
+    try {
+      const response = await fetch("/api/health");
+      const latency = Math.round(performance.now() - started);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const data = await response.json();
+      const uptimeSeconds = data?.uptimeSeconds ?? Math.floor(data?.uptime || 0);
+      const uptimeLabel = uptimeSeconds ? formatUptime(uptimeSeconds) : "unknown";
+      pushHealthToast({
+        type: "success",
+        message: `Heartbeat steady: ${latency}ms - uptime ${uptimeLabel}`,
+      });
+    } catch (error) {
+      pushHealthToast({
+        type: "error",
+        message: `Health check failed: ${error.message}`,
+      });
+    }
+  }, [pushHealthToast]);
+
   const handleBatchRename = useCallback(() => {
     setBatchRenameModalOpen(true);
   }, []);
@@ -1468,6 +1624,28 @@ export default function App() {
   useEffect(() => {
     fetchServers();
   }, [fetchServers]);
+
+  const selectedServerData = useMemo(() => {
+    if (!selectedServer) return null;
+    return groups.find((g) => g.id === selectedServer) || null;
+  }, [groups, selectedServer]);
+
+  const appPort = useMemo(() => {
+    if (typeof window === "undefined") {
+      return "4999";
+    }
+    return window.location.port || "4999";
+  }, []);
+
+  const autoRefreshMessages = useMemo(() => {
+    const isTrueNAS = Boolean(
+      selectedServerData?.platformName?.toLowerCase().includes("truenas")
+    );
+    return buildAutoRefreshMessages({
+      isTrueNAS,
+      currentPort: appPort || "4999",
+    });
+  }, [selectedServerData, appPort]);
 
   if (auth.loading) {
     return (
@@ -1633,14 +1811,38 @@ export default function App() {
     ));
   }
 
-  const serverToRender = selectedServer
-    ? groups.find((g) => g.id === selectedServer)
-    : null;
+  const serverToRender = selectedServerData;
   const noDataForSelection = selectedServer && !serverToRender && !loading;
 
   return (
     <TooltipProvider>
-      <div className="flex flex-col h-screen bg-slate-50 dark:bg-slate-950">
+      {konamiHint && (
+        <div className="fixed top-20 left-1/2 -translate-x-1/2 z-50 px-4 py-2 rounded-lg shadow-lg border backdrop-blur-sm pointer-events-none animate-in fade-in-0 slide-in-from-top-2 duration-200 bg-white/95 dark:bg-slate-800/95 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100">
+          <div className="flex items-center gap-2">
+            <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400 animate-pulse" />
+            <span className="text-sm font-medium">{konamiHint}</span>
+          </div>
+        </div>
+      )}
+      {healthToast && (
+        <div
+          className={`fixed top-20 right-6 z-50 px-4 py-2.5 rounded-lg shadow-lg border backdrop-blur-sm animate-in fade-in-0 slide-in-from-top-2 duration-200 ${
+            healthToast.type === "error"
+              ? "bg-rose-50/95 dark:bg-rose-900/95 border-rose-200 dark:border-rose-800 text-rose-900 dark:text-rose-100"
+              : "bg-white/95 dark:bg-slate-800/95 border-slate-200 dark:border-slate-700 text-slate-900 dark:text-slate-100"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            {healthToast.type === "error" ? (
+              <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-rose-500 dark:bg-rose-400" />
+            ) : (
+              <div className="flex-shrink-0 w-1.5 h-1.5 rounded-full bg-indigo-500 dark:bg-indigo-400" />
+            )}
+            <span className="text-sm font-medium">{healthToast.message}</span>
+          </div>
+        </div>
+      )}
+      <div className={`flex flex-col h-screen bg-slate-50 dark:bg-slate-950 ${hackerMode ? "hacker-mode-active" : ""}`}>
         <AppHeader
           groups={groups}
           loading={loading}
@@ -1663,6 +1865,10 @@ export default function App() {
           hasNewFeatures={shouldShowWhatsNewButton}
           autoRefreshEnabled={autoRefreshEnabled}
           onAutoRefreshToggle={() => setAutoRefreshEnabled(!autoRefreshEnabled)}
+          onLogoLongPress={handleLogoHealthCheck}
+          hackerMode={hackerMode}
+          onDisableHackerMode={disableHackerMode}
+          autoRefreshMessages={autoRefreshMessages}
         />
         <DashboardLayout
           isSidebarOpen={isSidebarOpen}
@@ -1886,3 +2092,6 @@ export default function App() {
     }
   }
 }
+
+
+

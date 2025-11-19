@@ -60,7 +60,13 @@ export function VMsCard({ vms, enhancedFeaturesEnabled }) {
     return <TrueNASApiKeyEmptyState />;
   }
 
-  if (!vms || vms.length === 0) return null;
+  if (!vms || vms.length === 0) {
+    return (
+      <div className="p-6 text-center text-slate-500 dark:text-slate-400">
+        No VMs detected. This server is living a simple, uncomplicated life.
+      </div>
+    );
+  }
 
   return (
     <div className="p-6 pt-4 space-y-4">

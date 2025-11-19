@@ -16,6 +16,7 @@ import { Input } from "@/components/ui/input";
 import Logo from "@/components/Logo";
 import { useAuth } from "@/contexts/AuthContext";
 import { RefreshProgress } from "@/components/ui/RefreshProgress";
+import { useLongPress } from "@/lib/hooks/useLongPress";
 
 export function AppHeader({
   loading,
@@ -37,6 +38,10 @@ export function AppHeader({
   hasNewFeatures = false,
   autoRefreshEnabled = false,
   onAutoRefreshToggle,
+  onLogoLongPress,
+  hackerMode = false,
+  onDisableHackerMode,
+  autoRefreshMessages = [],
 }) {
   const auth = useAuth();
   const [localSearchTerm, setLocalSearchTerm] = useState(searchTerm);
@@ -111,6 +116,15 @@ export function AppHeader({
     return "pr-10";
   };
 
+  const logoLongPressHandlers = useLongPress(
+    () => {
+      if (onLogoLongPress) {
+        onLogoLongPress();
+      }
+    },
+    { threshold: 800 }
+  );
+
   return (
     <header className="bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 relative flex-shrink-0 isolate z-10">
       <div className="min-h-16 px-4 sm:px-6 py-2 flex flex-col md:flex-row items-center justify-between gap-4 relative z-10">
@@ -124,6 +138,7 @@ export function AppHeader({
           </button>
           <button
             onClick={onGoHome}
+            {...logoLongPressHandlers}
             className="flex items-center gap-3 text-xl font-bold text-slate-800 dark:text-slate-200 group cursor-pointer"
           >
             <Logo
@@ -319,6 +334,17 @@ export function AppHeader({
             <TooltipContent>{isDarkMode ? "Switch to light mode" : "Switch to dark mode"}</TooltipContent>
           </Tooltip>
 
+          {hackerMode && onDisableHackerMode && (
+            <Button
+              variant="outline"
+              size="sm"
+              className="text-emerald-500 border-emerald-500/40 bg-emerald-500/5 hover:bg-emerald-500/10"
+              onClick={onDisableHackerMode}
+            >
+              Exit Hacker Mode
+            </Button>
+          )}
+
           {auth.authEnabled && auth.authenticated && (
             <DropdownMenu>
               <Tooltip>
@@ -350,7 +376,11 @@ export function AppHeader({
         </div>
       </div>
 
-      <RefreshProgress active={autoRefreshEnabled && !loading} duration={30000} />
+      <RefreshProgress
+        active={autoRefreshEnabled && !loading}
+        duration={30000}
+        messages={autoRefreshMessages || []}
+      />
     </header>
   );
 }

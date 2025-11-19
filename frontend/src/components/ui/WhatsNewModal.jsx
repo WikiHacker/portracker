@@ -1,7 +1,7 @@
 import React from 'react';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from './dialog';
 import { Button } from './button';
-import { Globe, Database, Zap, Sparkles, Shield, Layout, Server, HardDrive, Wrench, Package, Bandage } from 'lucide-react';
+import { Globe, Database, Sparkles, Shield, Layout, Server, HardDrive, Wrench, Package, Bandage } from 'lucide-react';
 import { getFeatureIcon } from '../../lib/feature-icons';
 import { cn } from '@/lib/utils';
 

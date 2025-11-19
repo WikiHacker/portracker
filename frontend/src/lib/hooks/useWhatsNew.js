@@ -138,7 +138,6 @@ export function useWhatsNew() {
             
             if (!isDismissed) {
               logger.debug('Opening What\'s New modal');
-              // Small delay to ensure dashboard is rendered and stable
               setTimeout(() => {
                 setIsModalOpen(true);
               }, 1000);

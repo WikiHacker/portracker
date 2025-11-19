@@ -48,6 +48,15 @@ export function SystemInfoCard({ systemInfo, platformName }) {
     containersRunning: systemInfo.containers_running,
     containersTotal: systemInfo.containers_total,
   };
+  const memoryGb = info.memory ? info.memory / (1024 ** 3) : null;
+  let memoryMessage = null;
+  if (memoryGb != null) {
+    if (memoryGb >= 128) {
+      memoryMessage = "That's a lot of RAM.";
+    } else if (memoryGb < 4) {
+      memoryMessage = "Running lean. Respect.";
+    }
+  }
 
   const containerInfoValue = () => {
     const running = info.containersRunning;
@@ -101,6 +110,11 @@ export function SystemInfoCard({ systemInfo, platformName }) {
             label="Memory"
             value={info.memory ? `Total: ${formatBytes(info.memory)}` : "N/A"}
           />
+          {memoryMessage && (
+            <div className="col-span-2 text-xs text-slate-500 dark:text-slate-400 italic">
+              {memoryMessage}
+            </div>
+          )}
           <InfoItem
             icon={Clock}
             label="Uptime"
@@ -117,3 +131,5 @@ export function SystemInfoCard({ systemInfo, platformName }) {
     </div>
   );
 }
+
+
