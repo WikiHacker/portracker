@@ -97,6 +97,17 @@ if (!tableExists) {
   );
 `);
   createCustomServiceNamesTable.run();
+
+  const createUsersTable = db.prepare(`
+  CREATE TABLE IF NOT EXISTS users (
+    id TEXT PRIMARY KEY,
+    username TEXT UNIQUE NOT NULL,
+    password_hash TEXT NOT NULL,
+    created_at INTEGER NOT NULL,
+    last_login INTEGER
+  );
+`);
+  createUsersTable.run();
 } else {
   try {
     const notesColumns = db.prepare("PRAGMA table_info(notes)").all();
@@ -482,6 +493,26 @@ if (!tableExists) {
       `);
       
       logger.info('Schema migration: custom_service_names table updated with protocol support');
+    }
+
+    const usersTableExists = db
+      .prepare(
+        "SELECT name FROM sqlite_master WHERE type='table' AND name='users'"
+      )
+      .get();
+    
+    if (!usersTableExists) {
+      logger.info('Schema migration: Creating "users" table for authentication');
+      db.exec(`
+        CREATE TABLE users (
+          id TEXT PRIMARY KEY,
+          username TEXT UNIQUE NOT NULL,
+          password_hash TEXT NOT NULL,
+          created_at INTEGER NOT NULL,
+          last_login INTEGER
+        );
+      `);
+      logger.info('Schema migration: users table created successfully');
     }
 
   } catch (migrationError) {

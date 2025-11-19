@@ -22,12 +22,15 @@ import { BatchOperationsBar } from "./components/server/BatchOperationsBar";
 import { BatchRenameModal } from "./components/server/BatchRenameModal";
 import { BatchHideModal } from "./components/server/BatchHideModal";
 import { BatchNotesModal } from "./components/server/BatchNotesModal";
+import { LoginPage } from "./components/auth/LoginPage";
+import { ChangePasswordPage } from "./components/auth/ChangePasswordPage";
 import { BarChart3 } from "lucide-react";
 import Logger from "./lib/logger";
 import { useWhatsNew } from "./lib/hooks/useWhatsNew";
 import { saveCustomServiceName, deleteCustomServiceName, getCustomServiceNames, batchCustomServiceNames } from "./lib/api/customServiceNames";
 import { batchNotes, saveNote } from "./lib/api/notes";
 import { generatePortKey } from "./lib/utils/portUtils";
+import { useAuth } from "./contexts/AuthContext";
 
 const keyOf = (srvId, p) => generatePortKey(srvId, p);
 
@@ -35,12 +38,13 @@ const logger = new Logger('App');
 
 
 export default function App() {
+  const auth = useAuth();
+  const { shouldShowButton: shouldShowWhatsNewButton, handleShow: handleShowWhatsNew, getModalProps: getWhatsNewModalProps } = useWhatsNew();
+  
   const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   
-  const { shouldShowButton: shouldShowWhatsNewButton, handleShow: handleShowWhatsNew, getModalProps: getWhatsNewModalProps } = useWhatsNew();
-
   const [noteModalOpen, setNoteModalOpen] = useState(false);
   const [modalSrvId, setModalSrvId] = useState("");
   const [modalPort, setModalPort] = useState(null);
@@ -580,8 +584,11 @@ export default function App() {
   
 
   useEffect(() => {
+    if (auth.loading || (auth.authEnabled && !auth.authenticated)) {
+      return;
+    }
     fetchAll();
-  }, [fetchAll]);
+  }, [fetchAll, auth.loading, auth.authEnabled, auth.authenticated]);
 
   useEffect(() => {
     try {
@@ -592,6 +599,12 @@ export default function App() {
       if (s) setDeepLinkServer(s);
   } catch { void 0; }
   }, []);
+
+  useEffect(() => {
+    if (auth.authenticated && !auth.loading && groups.length === 0) {
+      fetchAll();
+    }
+  }, [auth.authenticated, auth.loading, fetchAll, groups.length]);
 
   useEffect(() => {
     if (!loading && groups.length > 0) {
@@ -1425,6 +1438,25 @@ export default function App() {
   useEffect(() => {
     fetchServers();
   }, [fetchServers]);
+
+  if (auth.loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 dark:bg-slate-950">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-slate-600 dark:text-slate-400">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (auth.authEnabled && !auth.authenticated) {
+    return <LoginPage />;
+  }
+
+  if (auth.requirePasswordChange) {
+    return <ChangePasswordPage />;
+  }
 
   const filterPorts = (group) => {
     if (!group.ok || !group.data) return group;

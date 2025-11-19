@@ -52,6 +52,15 @@ services:
       # - TrueNAS-specific optimizations
       # - TRUENAS_API_KEY=your-api-key-here
       
+      # AUTHENTICATION (Optional - v1.2.0+)
+      # Enable authentication to protect dashboard access
+      # When enabled, users must login to access the dashboard
+      # Note: API endpoints for peer communication remain accessible
+      # - ENABLE_AUTH=true
+      # Optional: Set a custom session secret (recommended for production)
+      # If not set, a random secret is generated (sessions won't persist across restarts)
+      # - SESSION_SECRET=your-random-secret-here-change-this
+      
       # PERFORMANCE SETTINGS (Optional)
       # Cache duration - increase for better performance, decrease for fresher data
       # - CACHE_TIMEOUT_MS=60000

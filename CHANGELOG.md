@@ -2,6 +2,16 @@
 
 All notable changes to portracker will be documented in this file.
 
+## [Unreleased]
+
+## [1.2.0] - 2025-11-19
+
+### Added
+- **Authentication**: Optional authentication to secure dashboard access using `ENABLE_AUTH=true`
+  - Disabled by default and completely optional
+  - Recovery mode accessible via `RECOVERY_MODE=true` if you lose your password
+  - When recovery mode is enabled, a time-limited recovery code (valid 15 minutes) appears in the logs to use on the login page with any username
+
 ## [1.1.1] - 2025-01-17
 
 ### Features

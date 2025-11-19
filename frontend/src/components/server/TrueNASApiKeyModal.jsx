@@ -8,6 +8,9 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Key, Check } from "lucide-react";
+import Logger from '../../lib/logger';
+
+const logger = new Logger('TrueNASApiKeyModal');
 
 /**
  * Modal component that provides step-by-step instructions
@@ -26,7 +29,7 @@ export function TrueNASApiKeyModal({ isOpen, onClose }) {
           setTimeout(() => setCopiedEnvVar(false), 2000);
         })
         .catch((err) => {
-          console.warn("Clipboard API failed, trying fallback", err);
+          logger.warn("Clipboard API failed, trying fallback", err);
           fallbackCopy(text);
         });
     } else {
@@ -52,7 +55,7 @@ export function TrueNASApiKeyModal({ isOpen, onClose }) {
         setTimeout(() => setCopiedEnvVar(false), 2000);
       }
     } catch (err) {
-      console.error("All copy methods failed", err);
+      logger.error("All copy methods failed", err);
     }
   };
 

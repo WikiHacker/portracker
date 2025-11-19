@@ -174,12 +174,39 @@ Configure `portracker` using environment variables.
 | `PORT`\*           | The port the web application will run on.              | `4999`                |
 | `DATABASE_PATH`\*  | Path inside the container to the SQLite database file. | `/data/portracker.db` |
 | `TRUENAS_API_KEY`  | Optional API key for enhanced TrueNAS data collection. | ` `                   |
+| `ENABLE_AUTH`      | Set to `true` to enable authentication (v1.2.0+).      | `false`               |
+| `SESSION_SECRET`   | Secret key for session encryption (recommended when auth enabled). | _random_  |
 | `CACHE_TIMEOUT_MS` | Duration in milliseconds to cache scan results.        | `60000`               |
 | `DISABLE_CACHE`    | Set to `true` to disable all caching.                  | `false`               |
 | `INCLUDE_UDP`      | Set to `true` to include UDP ports in scans.           | `false`               |
 | `DEBUG`            | Set to `true` for verbose application logging.         | `false`               |
 
 <sub>\*_Required_</sub>
+
+### Authentication Setup (v1.2.0+)
+
+Portracker includes optional authentication to secure dashboard access:
+
+1. **Enable Authentication**: Set `ENABLE_AUTH=true` in your environment variables
+2. **First-Time Setup**: On first access, you'll see a setup wizard to create the admin account
+3. **Login**: Use your admin credentials to access the dashboard
+4. **Production Recommendation**: Set a custom `SESSION_SECRET` for secure session management
+
+**Example with Authentication:**
+
+```yaml
+services:
+  portracker:
+    image: mostafawahied/portracker:latest
+    environment:
+      - ENABLE_AUTH=true
+      - SESSION_SECRET=your-random-secret-here-change-this
+```
+
+**Important Notes:**
+- Authentication is **disabled by default** for backward compatibility
+- When enabled, the dashboard requires login but API endpoints for peer communication remain accessible
+- API key authentication for peer-to-peer communication is planned for v1.3.0
 
 ## Technical Stack
 
@@ -191,9 +218,10 @@ Configure `portracker` using environment variables.
 
 Future development is focused on improving the application based on community feedback. Key areas include:
 
-- Adding user authentication.
-- Expanding the library of platform-specific collectors for other host systems.
-- Addressing bugs and incorporating requested changes from the community.
+- ~~Adding user authentication~~ ✅ **Added in v1.2.0** (optional authentication with setup wizard)
+- Adding API key authentication for peer-to-peer communication (planned for v1.3.0)
+- Expanding the library of platform-specific collectors for other host systems
+- Addressing bugs and incorporating requested changes from the community
 
 ## Star History
 

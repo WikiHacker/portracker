@@ -10,7 +10,7 @@ import {
 } from "@/components/ui/drawer";
 import { Button } from "@/components/ui/button";
 import { Copy, ChevronDown, ChevronUp, Check, Box, Activity, Globe2, Network, Terminal, Settings2, Tag, HardDrive, Info, Gauge, Cpu, FileJson, Download, RefreshCw } from "lucide-react";
-import { StatsSkeleton } from './parts/StatsSkeleton';
+import StatsSkeleton from './parts/StatsSkeleton';
 import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { InfoTile } from './parts/InfoTile';

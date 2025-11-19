@@ -6,8 +6,12 @@
  * and system monitoring across multiple deployment platforms.
  */
 
+require('dotenv').config({ path: __dirname + '/.env' });
+
 const express = require('express');
 const cors = require('cors');
+const session = require('express-session');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const fs = require('fs');
 const fetch = (...args) => (globalThis.fetch ? globalThis.fetch(...args) : import('node-fetch').then(m => m.default(...args)));
@@ -17,6 +21,9 @@ const { createCollector, detectCollector } = require('./collectors');
 const db = require('./db');
 const https = require("https");
 const os = require("os");
+const { requireAuth, checkAuthEnabled, isAuthEnabled } = require('./middleware/auth');
+const authRoutes = require('./routes/auth');
+const recoveryManager = require('./lib/recovery-manager');
 
 const logger = new Logger("Server", { debug: process.env.DEBUG === 'true' });
 const BASE_DEBUG = process.env.DEBUG === 'true';
@@ -24,6 +31,12 @@ const dockerApi = new DockerAPIClient();
 const { SimpleTTLCache } = require('./utils/cache');
 const responseCache = new SimpleTTLCache();
 const RESP_TTL_PORTS = parseInt(process.env.ENDPOINT_CACHE_PORTS_TTL_MS || '3000', 10);
+
+if (isAuthEnabled()) {
+  logger.info('Authentication is ENABLED - Login required for dashboard access');
+} else {
+  logger.info('Authentication is DISABLED - Dashboard is publicly accessible');
+}
 
 const PING_TIMEOUT = 2000;
 
@@ -550,8 +563,45 @@ try {
 }
 
 const app = express();
-app.use(cors());
+
+app.use(cors({
+  origin: true,
+  credentials: true
+}));
 app.use(express.json());
+app.use(cookieParser());
+
+const sessionSecret = process.env.SESSION_SECRET || require('crypto').randomBytes(32).toString('hex');
+
+if (!process.env.SESSION_SECRET) {
+  logger.warn('No SESSION_SECRET set - using random secret (sessions will not persist across restarts)');
+}
+
+app.use(session({
+  secret: sessionSecret,
+  resave: false,
+  saveUninitialized: false,
+  name: 'portracker.sid',
+  cookie: {
+    secure: false,
+    httpOnly: true,
+    maxAge: 24 * 60 * 60 * 1000,
+    sameSite: 'lax'
+  }
+}));
+
+logger.info('Session middleware configured');
+
+if (isAuthEnabled()) {
+  logger.info('Authentication is ENABLED - Login required for dashboard access');
+} else {
+  logger.info('Authentication is DISABLED - Dashboard is publicly accessible');
+}
+
+app.use(checkAuthEnabled);
+
+app.use('/api/auth', authRoutes);
+
 const PORT = process.env.PORT || 3000;
 
 /**
@@ -1228,7 +1278,7 @@ function validateCustomServiceNameDeleteInput(req, res, next) {
   next();
 }
 
-app.get("/api/servers", (req, res) => {
+app.get("/api/servers", requireAuth, (req, res) => {
   logger.debug("GET /api/servers");
   try {
     const stmt = db.prepare(
@@ -1246,7 +1296,7 @@ app.get("/api/servers", (req, res) => {
   }
 });
 
-app.post("/api/servers", validateServerInput, (req, res) => {
+app.post("/api/servers", requireAuth, validateServerInput, (req, res) => {
   const { id, label, url, parentId, type, unreachable, platform_type } =
     req.body;
 
@@ -1325,7 +1375,7 @@ app.post("/api/servers", validateServerInput, (req, res) => {
   }
 });
 
-app.delete("/api/servers/:id", validateServerIdParam, (req, res) => {
+app.delete("/api/servers/:id", requireAuth, validateServerIdParam, (req, res) => {
   const serverId = req.params.id;
   const currentDebug = req.query.debug === "true";
   
@@ -1391,7 +1441,7 @@ app.delete("/api/servers/:id", validateServerIdParam, (req, res) => {
   }
 });
 
-app.post("/api/notes", validateNoteInput, (req, res) => {
+app.post("/api/notes", requireAuth, validateNoteInput, (req, res) => {
   const { server_id, host_ip, host_port, protocol, note, container_id, internal } = req.body;
   const currentDebug = req.query.debug === "true";
   const noteTrimmed = note ? note.trim() : "";
@@ -1440,7 +1490,7 @@ app.post("/api/notes", validateNoteInput, (req, res) => {
   }
 });
 
-app.get("/api/notes", (req, res) => {
+app.get("/api/notes", requireAuth, (req, res) => {
   const { server_id } = req.query;
   const currentDebug = req.query.debug === "true";
 
@@ -1473,7 +1523,7 @@ app.get("/api/notes", (req, res) => {
   }
 });
 
-app.post("/api/ignores", validateIgnoreInput, (req, res) => {
+app.post("/api/ignores", requireAuth, validateIgnoreInput, (req, res) => {
   const { server_id, host_ip, host_port, protocol, ignored, container_id, internal } = req.body;
   const currentDebug = req.query.debug === "true";
 
@@ -1523,7 +1573,7 @@ app.post("/api/ignores", validateIgnoreInput, (req, res) => {
   }
 });
 
-app.get("/api/ignores", (req, res) => {
+app.get("/api/ignores", requireAuth, (req, res) => {
   const { server_id } = req.query;
   const currentDebug = req.query.debug === "true";
 
@@ -1557,7 +1607,7 @@ app.get("/api/ignores", (req, res) => {
   }
 });
 
-app.post("/api/custom-service-names", validateCustomServiceNameInput, (req, res) => {
+app.post("/api/custom-service-names", requireAuth, validateCustomServiceNameInput, (req, res) => {
   const { server_id, host_ip, host_port, protocol, custom_name, original_name, container_id, internal } = req.body;
   const currentDebug = req.query.debug === "true";
 
@@ -1648,7 +1698,7 @@ app.post("/api/custom-service-names", validateCustomServiceNameInput, (req, res)
   }
 });
 
-app.get("/api/custom-service-names", (req, res) => {
+app.get("/api/custom-service-names", requireAuth, (req, res) => {
   const { server_id } = req.query;
   const currentDebug = req.query.debug === "true";
 
@@ -1681,7 +1731,7 @@ app.get("/api/custom-service-names", (req, res) => {
   }
 });
 
-app.delete("/api/custom-service-names", validateCustomServiceNameDeleteInput, (req, res) => {
+app.delete("/api/custom-service-names", requireAuth, validateCustomServiceNameDeleteInput, (req, res) => {
   const { server_id, host_ip, host_port, protocol, container_id, internal } = req.body;
   const currentDebug = req.query.debug === "true";
 
@@ -1752,7 +1802,7 @@ app.delete("/api/custom-service-names", validateCustomServiceNameDeleteInput, (r
   }
 });
 
-app.post("/api/custom-service-names/batch", (req, res) => {
+app.post("/api/custom-service-names/batch", requireAuth, (req, res) => {
   const { server_id, operations } = req.body;
   const currentDebug = req.query.debug === "true";
 
@@ -1883,7 +1933,7 @@ app.post("/api/custom-service-names/batch", (req, res) => {
   }
 });
 
-app.post("/api/notes/batch", (req, res) => {
+app.post("/api/notes/batch", requireAuth, (req, res) => {
   const { server_id, operations } = req.body;
   const currentDebug = req.query.debug === "true";
 
@@ -2378,6 +2428,11 @@ app.use((err, req, res, next) => {
 });
 
 logger.info(`About to call app.listen on port ${PORT}`);
+
+if (isAuthEnabled() && recoveryManager.isRecoveryModeEnabled()) {
+  recoveryManager.generateKey();
+}
+
 try {
   app.listen(PORT, "0.0.0.0", () => {
     logger.info(`Server is now listening on http://0.0.0.0:${PORT}`);

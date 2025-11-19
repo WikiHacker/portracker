@@ -8,7 +8,7 @@ try { reactPlugin = require('eslint-plugin-react'); } catch { reactPlugin = null
 const logsPlugin = {
   rules: {
     'no-line-comments': {
-      meta: { type: 'problem', docs: { description: 'Disallow // line comments; use block comments or remove' } },
+      meta: { type: 'problem', docs: { description: 'Disallow comments; remove them' } },
       create(context) {
         const allowList = [
           /^eslint[- ]/i,
@@ -22,15 +22,16 @@ const logsPlugin = {
             const sourceCode = context.sourceCode || context.getSourceCode();
             const comments = sourceCode.getAllComments();
             for (const c of comments) {
-              if (c.type === 'Line') {
-                const text = String(c.value || '').trim();
-                const allowed = allowList.some((re) => re.test(text));
-                if (!allowed) {
-                  context.report({
-                    loc: c.loc,
-                    message: 'Line comments (//) are disallowed. Convert to a block comment (/* */) if this is essential documentation, or remove the comment.',
-                  });
-                }
+              const text = String(c.value || '').trim();
+              const allowed = allowList.some((re) => re.test(text));
+              // Allow JSDoc comments (start with *)
+              const isJSDoc = c.type === 'Block' && text.startsWith('*');
+              
+              if (!allowed && !isJSDoc) {
+                context.report({
+                  loc: c.loc,
+                  message: 'Comments are disallowed. Remove the comment.',
+                });
               }
             }
           },
