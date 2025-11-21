@@ -2,6 +2,12 @@
 
 All notable changes to portracker will be documented in this file.
 
+## [1.2.1] - 2025-11-21
+
+### Performance & Reliability
+
+- **TrueNAS Enhanced Features**: Fixed VM and LXC container cards disappearing after auto-refresh on resource-constrained systems
+
 ## [1.2.0] - 2025-11-20
 
 ### Security
